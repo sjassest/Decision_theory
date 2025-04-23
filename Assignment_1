@@ -21,8 +21,6 @@ body{/*Normal*/
 }
 </style>
 
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(knitr)
@@ -34,47 +32,48 @@ library(plotly)
 ```
 
 
-Notes:
-Package used: mlogit. 
-This is a data set with choices about mode of transportation. 
+# **Showing Data set**
+<p style="color:blue;">This is a data set with choices about mode of transportation. </p>
+
 
 ```{r}
 data("Mode")
 ```
 
+
+
 ```{r}
 glimpse(Mode)
 ```
 
+
 ```{r}
 summary(Mode)
 ```
-Once you have loaded the data set, answer the following questions:
-Describe this data set. 
+# **Describing Data set**
+
 
 **How many variables are there and of which type (i.e., categorical/quantitative)?**
 
-
 **Explanation:**
 <p style="color:blue;">The data set consists of 9 variables, one of them is a categorical variable ("choice") while the others are quantitative.
-The dataset explains a group of people who chose from a list of different types of transportation, and how much money and time they spent using it</p>
+The data set explains a group of people who chose from a list of different types of transportation, theirs, and how much money and time they spent using it.</p>
 
-
-**How many different modes of transportation are in this data set? What is the most popular mode? What is the least popular mode?**
+## **Choice**
 ```{r}
 ggplot(Mode)+
   geom_bar(aes(choice, fill=choice), color="black", show.legend = FALSE)+
   theme_bw()
 ```
 
+**How many different modes of transportation are in this data set? What is the most popular mode? What is the least popular mode?**
+
+
 **Explanation:**
-<p style="color:blue;">Este es un párrafo con texto en color azul.</p>
+<p style="color:blue;">There are four modes, and the most popular one is the car, as shown in the histogram.</p>
 
 
-
-
-**In general, what is the most expensive mode? The least expensive?**
-
+## **Most expensive mode.**
 ```{r}
 ggplot(Mode)+
   geom_density(aes(cost.car, fill="car"), color="black", alpha=0.5)+
@@ -87,10 +86,14 @@ theme_bw()
   
 ```
 
+**In general, what is the most expensive mode? The least expensive?**
 
+**Explanation:**
+<p style="color:blue;">In general, the costliest option is by car. On the other hand, the cheapest must be carpooling; it's just a matter of comparing the peaks in the plot cause most of them are leptocurtic shaped. However, this plot could not be the most appropriate for this case.</p>
 
-Create a plot showing the univariate distributions of time by car and time by bus. Discuss.
+## **Time spent**
 
+**Create a plot showing the univariate distributions of time by car and time by bus. Discuss.**
 
 ```{r}
 grafica_time <- ggplot(Mode)+
@@ -105,8 +108,13 @@ theme_bw()
 
 ggplotly(grafica_time)  
 ```
+**Discussion:**
+<p style="color:blue;">Once again, this might not be the most appropriate plot for making this comparison due to the densities being more dispersed. However, by looking at the means summarized in the 'Showing Data set' section, we can conclude that the fastest option is by car, while the slowest is the bus. </p>
 
-How do choices relate to cost by the different modes?
+
+## **Choices vs Costs | Choices vs Time**
+
+**How do choices relate to cost / Time by the different modes?**
 
 ```{r}
 varnum <- Mode |> dplyr::select(where(is.numeric))
@@ -121,6 +129,8 @@ grafica_box <- ggplot(Mode)+
   print(grafica_box)
     
 }
+
+
 
 ```
 
