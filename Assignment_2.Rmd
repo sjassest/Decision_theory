@@ -1,0 +1,348 @@
+---
+title: "Assignment_2"
+author: "Samuel Estrada Jasso"
+date: "2025-04-23"
+output:
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_depth: 3
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+<style type="text/css">
+body{/*Normal*/
+     font-size: 20px;
+}
+</style>
+
+```{r}
+#rm(list = ls())  removes objects from the environment cleaning memory
+
+```
+ 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(tidyverse)
+library(discrtr) # A companion package for the book Introduction to Discrete Choice Analysis with `R`
+library(mlogit) # Multinomial Logit Models
+library(readr) # Read Rectangular Text Data
+
+library(gplots) # Various R Programming Tools for Plotting Data
+library(ggmosaic) # Mosaic Plots in the 'ggplot2' Framework
+library(treemapify)
+library(ggridges)
+library(ggalluvial)
+library(plotly)
+```
+
+# **Exploratory Data Analysis (EDA)**
+
+# **Part one**
+
+
+ 1. Why is EDA an important part of a modeling exercise?
+ <p style="color:green;"> Answer:  Exploratory data analysis is highly important today, as it enables the transformation of large volumes of data into relevant knowledge through descriptive statistics, helping to identify patterns and associations (pre-estimation). These insights can then be communicated (post-estimation) using visualization tools, making them easier to interpret and understand.</p>
+
+ 
+ 2. How many aesthetic elements of visualization can you think of? List them and
+ explain how they could be mapped to variables in different scales.
+ <p style="color:green;">  Answer: - A heatmap using color intensity to represent numerical values, a scatter plot where points have different shapes based on a categorical variable like gender, and a multi-line plot where each category has a different line style.
+</p>
+ 
+ 3. The data set explored in this chapter was in wide format: each row was a single
+ respondent. However, discrete choice data is often found in long format: each row
+ is a choice situation, and each individual now appears in the table as many times
+ as they faced a choice situation. Would this change in any way how you approach
+ data analysis?
+<p style="color:green;">  Answer: he change from wide to long format significantly affects how one approaches data analysis. In wide format, each respondent appears once, making direct comparisons between different variables straightforward. In contrast, long format organizes data by choice situations, meaning each individual appears multiple times. This format is especially useful for modeling discrete choice behavior since it allows for capturing repeated measures and interactions between choices.</p>
+
+# **Part two**
+
+1. How many variables are there in this data set and of which type (i.e., categorical/quantitative)?
+<p style="color:green;">There are 74 variables </p>
+
+2. Choose four relevant categorical variables from this data set and describe them using univariate, bivariate, and multivariate techniques. Discuss your results.
+
+## **Univariate analisis**
+
+This analysis consists of exploring the variables separately.
+Let's start by looking at a descriptive summary of the variables.
+```{r}
+ # Pipetable `mc_commute_wide`
+ mc_commute_wide<-mc_commute_wide %>%
+ # Function`mutate()`createsnew columnsin the table;mutate
+ # thetable to convertvariables`child` and`vehind` tofactors
+ # withmore informativelabels
+ mutate(child= factor(child,
+ levels=c("Yes",
+ "No"),
+ # Givethe factor categoriesmoredescriptivelabels
+ labels=c("Livingwitha child",
+ "Not livingwith a child")),
+ # Relabel`vehind` variable
+ vehind =factor(vehind,
+ levels=c("No",
+ "Yes"),
+ # Givethe factor categoriesmoredescriptivelabels
+ labels=c("Noind. vehicleaccess",
+ "Ind. vehicleaccess")))
+
+summary(mc_commute_wide)
+```
+
+We see that the variables Shelters_SD, Shelters_D, Shelters_A, and Shelters_SA are dummy variables.
+
+
+```{r}
+ # Pipe data frame `mc_mode_wide` to next function
+ mc_commute_wide <- mc_commute_wide %>%
+ # Use mutate to create a new variable
+ # Function `case_when()` is a vectorized form of if-else statements
+ mutate(Shelters = case_when(Shelters_SD == 1 ~-2,
+ Shelters_D == 1 ~-1,
+ Shelters_A == 1 ~ 1,
+ Shelters_SA == 1 ~ 2,
+ TRUE ~ 0))
+
+summary(mc_commute_wide$Shelters_SD)
+```
+A new unique variable is created that combines all responses to this question (shelters_SD) into a single variable. First, we create a new variable, Shelters, with values that depend on the different columns that collectively contain the response to the question about the facilities. Now all the information is in a single variable, ranging from -2 to 2.
+
+```{r}
+mc_commute_wide <- mc_commute_wide |> mutate(Shelters = case_when(Shelters_SD == 1 ~ -2, Shelters_D == 1 ~ -1, 
+                                                                  Shelters_A == 1 ~ 1, Shelters_SA == 1 ~ 2, TRUE ~ 0))
+
+summary(mc_commute_wide$Shelters)
+```
+This variable has a mean of 0.09527, which means it is still treated as a continuous variable. Therefore, it will be handled as a "Factor," which is how R processes these types of variables.
+
+```{r}
+mc_commute_wide <- mc_commute_wide |>  mutate(Shelters = factor(Shelters, levels = c(-2, -1, 0, 1, 2), 
+                                                                labels = c("Strongly Disagree", "Disagree", 
+                                                                           "Neutral", "Agree", "Strongly Agree"), 
+                                                                ordered = TRUE))
+summary(mc_commute_wide$Shelters)
+
+```
+The summary is now a frequency table. To distinguish between continuous and categorical variables, it is advisable to encode categorical variables with labels instead of numbers, assigning character strings. The variable reflecting opinions about the facilities follows a Likert scale, meaning it is not only categorical but also ordinal. This is specified using ordered = TRUE when converting it into a factor. With the encoding complete, the data can be visualized. A simple way to display the distribution of a categorical variable is a bar chart.
+
+
+-BAR CHART-
+```{r}
+mc_commute_wide |> ggplot(aes(x = Shelters)) + 
+  geom_bar(color = "black", fill = "white") + 
+  labs(x = "Public transport facilities of good quality", y = "Number of respondents")
+```
+
+-LOLLIPOP CHART-
+```{r}
+mc_commute_wide |> group_by(Shelters) |> summarize(n = n()) |> 
+  ggplot(aes(x = Shelters, xend = Shelters, y = n, yend = 0)) +
+  geom_point(color = "black", fill = "white", size = 6) + 
+  geom_segment(linewidth = 1) +
+  labs(x = "Public transport facilities of good quality", y = "Number of respondents")
+```
+
+-TREEMAP-
+
+In the example, the number of trips per mode is counted (first grouping by choice and then calculating the number of trips in each category using n()).
+
+```{r}
+mc_commute_wide |> group_by(choice) |> summarize(n = n()) |> 
+ggplot(aes(fill = choice, area = n)) +
+  geom_treemap() +
+  labs(title = "Trips by mode", fill="Mode")
+```
+```{r}
+mc_commute_wide <- mc_commute_wide |>  mutate(housing = case_when(shared != "No" ~ "shared", 
+                                                                  family != "No" ~ "family",
+                                                                  TRUE ~ "solo"),
+                                              housing = factor(housing))
+summary(mc_commute_wide$housing)
+```
+
+## **Bivariate analisis**
+
+Now we explore the relationships between variables:
+
+Relationship between a categorical and a quantitative variable.
+
+
+-BOX PLOT-
+
+```{r}
+mc_commute_wide |>  select(choice, sidewalk_density) |> summary()
+```
+```{r}
+mc_commute_wide |>  ggplot(aes(x = choice, y = sidewalk_density)) +
+  geom_boxplot()
+```
+```{r}
+mc_commute_wide |>  ggplot(aes(x = choice, y = sidewalk_density)) + 
+  geom_boxplot() +
+  labs(x="Mode", y = expression("Sidewalk density (km/km"^2*")"))
+```
+
+-VIOLIN PLOT-
+```{r}
+mc_commute_wide |>  ggplot(aes(x = choice, y = sidewalk_density, fill = choice)) +
+  geom_violin(trim = TRUE) +
+  geom_boxplot(width = 0.1, fill = "white") + 
+  labs(x="Mode", y = expression("Sidewalk density (km/km"^2*")"), fill = "Mode")
+```
+
+
+-RIDGE PLOT-
+
+```{r}
+mc_commute_wide %>% ggplot(aes(x = sidewalk_density, y = choice, fill = choice)) +
+  geom_density_ridges(jittered_points = TRUE, bandwidth = 3.5, 
+                      position = position_points_jitter(width = 0.05, height = 0),
+                      point_shape = '|', point_size = 3, point_alpha = 1, alpha = 0.7) +
+  labs(y="Mode", x = expression("Sidewalk density (km/km"^2*")"), fill = "Mode")
+```
+
+Relationship between two categorical variables.
+
+-BALLON PLOT-
+```{r}
+summary(mc_commute_wide$child)
+```
+```{r}
+tableau <- table(mc_commute_wide$choice,
+mc_commute_wide$child)
+
+balloonplot(as.table(tableau),
+            xlab = "Mode", ylab = "Dependent minor(s)",
+            dotsize = 3/max(strwidth(19), strheight(19)),
+            dotcolor = "skyblue", text.size = 0.65,
+            main = "Mode as a function of dependent minors in household",
+            label = TRUE, label.size = 0.80,
+            # Scale balloons by volume (or diameter)
+            scale.method = c("volume"), scale.range = c("absolute"),
+            # Space for column/row labels
+            colmar = 1, rowmar = 2,
+            # Display zeros if present
+            show.zeros = TRUE,
+            # Display row and column sums
+            show.margins = TRUE,
+            # Display cumulative margins as cascade plots
+            cum.margins = TRUE)   
+```
+```{r}
+tableau <- table(mc_commute_wide$choice, mc_commute_wide$housing)
+
+balloonplot(as.table(tableau),
+            xlab = "Mode", ylab = "Living arrangement",
+            dotsize = 3/max(strwidth(19), strheight(19)),
+            # Symbol used for the dots
+            dotcolor = "skyblue", text.size = 0.65,
+            main = "Mode as a function of living arrangement",
+            label = TRUE, label.size = 0.80,
+            # Scale balloons by volume (or diameter)
+            scale.method = c("volume"),
+            # Scale balloons relative to zero
+            scale.range = c("absolute"),
+            # Space for column/row labels
+            colmar = 1, rowmar = 2,
+            # Display zeros if present
+            show.zeros = TRUE,
+            # Display row and column sums
+            show.margins = TRUE,
+            # Display cumulative margins as cascade plots
+            cum.margins = TRUE)
+```
+
+```{r}
+tableau <- table(mc_commute_wide$child, mc_commute_wide$housing)
+
+balloonplot(as.table(tableau),
+            xlab = "Living arrangement", ylab = "Dependent minor(s)",
+            dotsize = 3/max(strwidth(19), strheight(19)),
+            # Symbol used for the dots
+            dotcolor = "skyblue", text.size = 0.65,
+            main = "Dependent minors in household and living arrangement",
+            # Display the values in the cells
+            label = TRUE, label.size = 0.80,
+            # Scale balloons by volume (or diameter)
+            scale.method = c("volume"),
+            # Scale balloons relative to zero
+            scale.range = c("absolute"),
+            # Space for column/row labels
+            colmar = 1, rowmar = 2,
+            # Display zeros if present
+            show.zeros = TRUE,
+            # Display row and column sums
+            show.margins = TRUE,
+            # Display cumulative margins as cascade plots
+            cum.margins = TRUE)
+```
+
+```{r}
+mc_commute_wide |>  ggplot() +
+  geom_mosaic(aes(x = product(choice, child), fill = choice)) +
+  labs(x = "Dependent minor(s)", y = "Mode", fill = "Mode")
+```
+```{r}
+ggplot(data = mc_commute_wide) +
+  geom_mosaic(aes(x = product(choice, numna), fill = choice)) +
+  labs(x = "Number of alternatives", y = "Mode", fill = "Mode")
+```
+
+```{r}
+mc_commute_wide |> group_by(choice, housing) |> 
+  summarize(n = n(), .groups = "drop") |> 
+  ggplot(aes(x = choice, y = housing)) +
+  geom_tile(aes(fill = n)) +
+  labs(x = "Mode", y = "Living arrangement", fill = "Number of respondents")
+```
+
+```{r}
+mc_commute_wide |> ggplot(aes(x = like_active_neighborhood, fill = choice)) + 
+  geom_bar(position = "fill") + 
+  labs(y = "Proportion", x = "Like active neighborhood", fill="Mode")
+```
+
+-ALLUVIAL PLOT-
+```{r}
+mc_commute_alluvia <- mc_commute_wide |> 
+  mutate(living_arrangments = case_when(shared == "Living in Shared Accommodations" ~ "Shared",
+                                        family == "Living with Family" ~ "Family",
+                                        TRUE ~ "Other")) |> 
+  select(gender, living_arrangments, choice) |> 
+  group_by(gender, living_arrangments, choice) |> 
+  summarize(frequency = n(), .groups = "drop")
+```
+```{r}
+mc_commute_alluvia |> 
+  ggplot(aes(y = frequency, axis1 = gender, axis2 = living_arrangments, axis3 = choice)) +
+  geom_alluvium(aes(fill = gender), width = 1/3, color = "black") +
+  geom_stratum(width = 1/3, fill = "black", color = "grey") +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), color = "white", size = 3) +
+  scale_x_discrete(limits = c("Gender", "Living Arrangements", "Choice"), expand = c(.05, .05)) +
+  scale_fill_brewer(type = "qual", palette = "Dark2") + 
+  theme_minimal()
+```
+
+-FACETING-
+
+It is a technique that divides a figure into multiple panels, where each panel represents a segment of the data. In other words, faceting is a way to present the relationship between two variables, segmented by one or more additional variables. There is a simple function in ggplot2 to achieve this: facet_wrap, which allows us to segment any type of graph available in the ggplot function. Here, we examine once again the relationship between vehicle access, transportation mode choice, and sidewalk density using the faceting approach.
+
+```{r}
+mc_commute_wide |> ggplot(aes(x = sidewalk_density, y = choice, fill = vehind)) +
+  geom_density_ridges(jittered_points = TRUE, bandwidth = 3.5,
+                      position = position_points_jitter(width = 0.05, height = 0),
+                      point_shape = '|', point_size = 3, point_alpha = 1, alpha = 0.7) +
+  labs(y="Mode", x = expression("Sidewalk density (km/km"^2*")"),
+       fill = "Individual access to a vehicle") +
+  facet_wrap(~ vehind)
+```
+
