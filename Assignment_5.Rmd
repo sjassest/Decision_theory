@@ -1,0 +1,128 @@
+---
+title: "Assignment_5"
+author: "Samuel Estrada Jasso"
+date: "2025-05-30"
+output:
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_depth: 3
+---
+
+
+```{r, echo=FALSE, include=FALSE}
+library(knitr)
+library(tidyverse)
+library(discrtr)
+library(mlogit)
+library(readr)
+library(plotly)
+library(gplots)
+library(ggmosaic) 
+library(treemapify)
+library(ggridges)
+library(ggalluvial)
+library(dplyr)
+library(ggplot2)
+library(stargazer) 
+library(evd)
+library(htmlwidgets)
+library(kableExtra)
+library(tidyr)
+library(webshot2)
+library(dfidx)
+```
+
+# **Question 1.**
+What is the difference between a marginal effect and an elasticity?
+
+<p style="color:green;">The marginal effect measures how much the dependent variable changes when an independent variable $x_k$ increases by one unit. In contrast, elasticity indicates how the dependent variable proportionally varies in response to percentage changes in $x_k$.</p>
+
+# **Question 2.**
+Why is it not appropriate to calculate the elasticity of a dummy variable?
+
+<p style="color:green;">Marginal effects and elasticities are not suitable for qualitative (dummy) variables since it does not make sense to discuss unitary or percentage increases in categories like "mountain region."</p>
+
+# **Question 3.** 
+Use Model 3 from this chapter and calculate the marginal effects and elasticities of the operating cost at the mean of all variables.
+
+
+```{r}
+data("Heating")
+
+H <- Heating %>% mlogit.data(shape = "wide", choice="depvar", varying=c(3:12))
+
+model3 <- mlogit(depvar ~ ic + oc, data = Heating, shape = "wide", choice = "depvar", reflevel = "ec", varying = 3:12
+)
+
+medias <- Heating[1, ]
+
+mean_cost <- Heating %>%
+  select(starts_with("ic"), starts_with("oc")) %>%
+  summarise(across(.cols = everything(), mean))
+
+medias[3:12] <- mean_cost
+
+efectos_marginales <- effects(model3, covariate = "oc", type = "ra", data = mlogit.data(medias, shape = "wide", choice = "depvar", varying = 3:12))
+print("Efectos marginales:")
+print(efectos_marginales)
+
+elasticidades <- effects(model3, covariate = "oc", type = "rr", data = mlogit.data(medias, shape = "wide", choice = "depvar", varying = 3:12))
+print("Elasticidades:")
+print(elasticidades)
+```
+
+# **Question 4.** 
+Use Model 3 from this chapter to calculate the reimbursement needed to achieve a 10% penetration rate of heat pumps.
+
+```{r}
+rebates <- seq(0, 2000, by = 50)
+
+hp_shares <- numeric(length(rebates))
+
+Heating_original <- Heating
+
+for (i in seq_along(rebates)) {
+  Heating_temp <- Heating_original
+  Heating_temp$ic.hp <- Heating_temp$ic.hp - rebates[i]
+  
+  Heating_long <- mlogit.data(Heating_temp, shape = "wide", choice = "depvar",
+                              varying = 3:12, id.var = "idcase")
+  
+  prob_temp <- predict(model3, newdata = Heating_long, type = "probabilities")
+  
+  hp_shares[i] <- mean(prob_temp[, "hp"])
+}
+
+target_share <- 0.10
+required_rebate <- rebates[min(which(hp_shares >= target_share))]
+required_rebate
+```
+
+<p style="color:green;">A cost reduction of 450 monetary units is required to reach the desired quota.</p>
+
+## **Question 4.1** 
+Now, estimate a new extended model based on Model 3, including the age of the household head as an explanatory variable, and use the room electrical system ("er") as the reference category.
+
+
+```{r}
+model4 <- mlogit(depvar ~ ic + oc | agehed, Heating, shape = "wide", choice = "depvar", reflevel = "er", varying = c(3:12))
+
+summary(model4)
+```
+
+# **Question 5** 
+Use the likelihood ratio test to compare your new model with Model 3. Discuss the results.
+
+```{r}
+lrtest(model3, model4)
+```
+
+<p style="color:green;">Including the variable *agehed* increases the likelihood ratio, but the difference is not statistically significant. This indicates that the age of the household head does not have a relevant influence on the choice of heat pumps in this case.</p> 
+
+# **Question 6** 
+Is the ratio between the installation (or operating) cost coefficient and the household head's age coefficient significant? Explain.
+
+<p style="color:green;">It is not valid to interpret both ratios since they correspond to different types of variables—one specific to the alternative and the other to the individual.</p>
+
