@@ -1,0 +1,101 @@
+---
+title: "Assignment 3"
+author: "Samuel Estrada Jasso"
+date: "2025-05-27"
+output:
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_depth: 3
+---
+
+```{r, echo=FALSE, include=FALSE}
+library(knitr)
+library(tidyverse)
+library(discrtr)
+library(mlogit)
+library(readr)
+library(plotly)
+library(gplots)
+library(ggmosaic) 
+library(treemapify)
+library(ggridges)
+library(ggalluvial)
+library(dplyr)
+library(ggplot2)
+library(stargazer) 
+library(evd)
+library(htmlwidgets)
+library(kableExtra)
+library(tidyr)
+library(webshot2)
+library(dfidx)
+```
+
+# **Excercise 5**
+Consider the following utility functions for two alternatives, namely i and j:
+
+$U_i=V_i+ε_i$
+
+$U_j=V_j+ε_j$
+
+Assume that the difference between the error terms below follows the triangle distribution:
+
+$ε_q=ε_i−ε_j$
+
+Parting from the assumption above, derive a binary choice model for the probability of selecting alternative j.
+
+```{r}
+f_den <- function(x, B=1){
+  if(x>=-B & x<=0){
+    y <- 1/B^2 *x +1/B
+  }else if(x>0 & x<=B){
+    y <- -1/B^2 *x +1/B
+}else{
+    y <- 0
+}
+  return(y)
+}
+
+fv_den <- Vectorize(f_den, "x")
+
+f_dis <- function(x, B=1){
+  if(x<(-1)*B){
+    y <- 0}else if(x>=-B & x<=0){
+    y <- (x+B)*(fv_den(x)/2)
+  }else if(x>0 & x<=B){
+    y <- 1- (B-x)*fv_den(x)/2
+} else{
+    y <- 0
+}
+  return(y)
+}
+
+x <- seq(-1.5, 1.5, length.out=500)
+y <- sapply(x, f_den)
+
+ggplot()+
+  geom_line(aes(x,y), color="blue", , linewidth=1.5)+
+  geom_function(fun = fv_den, color="darkgreen", linewidth=0.5)+
+  xlim(-1.5, 1.5)+
+  theme_bw()
+
+decision <- function(Vj, Vi, B=1){
+  Vji <- Vj-Vi
+  PVj <- f_dis(Vji)
+  
+  ggplot()+
+  geom_function(fun = fv_den, color="blue", linewidth=0.5, xlim=c(-B-0.1, B+0.1))+
+  stat_function(fun = fv_den, geom= "area", fill="darkgreen", alpha=0.5, xlim=c(-B, Vji))+ 
+  geom_text(aes(B/2, 1/(2*B), label=paste0("Prob(Vj)=", round(PVj,2), sep="")))+
+    labs(title="Probabilidad de elección")+
+  theme_bw()
+  
+}
+
+decision(Vj=6, Vi=5.5)
+```
+
+The probability of selecting alternative $j$ is $0.88$.
+
