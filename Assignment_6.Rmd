@@ -1,0 +1,109 @@
+---
+title: "Assignment_6"
+author: "Samuel Estrada Jasso"
+date: "2025-05-30"
+output:
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_depth: 3
+---
+
+
+```{r, echo=FALSE, include=FALSE}
+library(knitr)
+library(tidyverse)
+library(discrtr)
+library(mlogit)
+library(readr)
+library(plotly)
+library(gplots)
+library(ggmosaic) 
+library(treemapify)
+library(ggridges)
+library(ggalluvial)
+library(dplyr)
+library(ggplot2)
+library(stargazer) 
+library(evd)
+library(htmlwidgets)
+library(kableExtra)
+library(tidyr)
+library(webshot2)
+library(dfidx)
+```
+
+# **Exercise 2**
+Use model nl2 in this chapter and calculate the direct-point elasticity at the mean values of the variables, for an increase in the installation costs of Gas Central systems.
+
+```{r}
+data("Heating", package = "mlogit")
+
+H <- mlogit.data(Heating, shape = "wide", choice = "depvar", varying = c(3:12))
+
+nl2 <- mlogit(depvar ~ ic + oc, H, nests = list(room = c( 'er', 'gr'), central = c('ec', 'gc', 'hp')), un.nest.el = TRUE, steptol = 1e-12)
+
+gc_data <- subset(H, alt == "gc")
+
+mean_ic_gc <- mean(gc_data$ic)
+
+probs <- fitted(nl2, type = "probabilities")
+
+mean_prob_gc <- mean(probs[H$alt == "gc"])
+
+beta_ic <- coef(nl2)["ic"]
+
+elasticity_gc_ic <- beta_ic * mean_ic_gc * (1 - mean_prob_gc)
+elasticity_gc_ic
+```
+
+<p style="color:green;">A 1% increase in the installation cost of the Central Gas system decreases the probability of being chosen by 0.052%.</p>
+
+# **Exercise 3**
+Use model nl2 in this chapter and calculate the cross-point elasticity at the mean values of the variables, for a 1% increase in the operation costs of Gas Central systems.
+
+```{r}
+gc_data <- subset(H, alt == "gc")
+
+mean_oc_gc <- mean(gc_data$oc)
+
+probs <- fitted(nl2, type = "probabilities")
+
+mean_probs <- tapply(probs, H$alt, mean)
+
+beta_oc <- coef(nl2)["oc"]
+
+P_ec <- mean_probs["ec"]
+P_gc <- mean_probs["gc"]
+
+elasticity_cross_ec_gc <- -beta_oc * mean_oc_gc * (P_gc / P_ec)
+elasticity_cross_ec_gc
+```
+
+<p style="color:green;">A 1% increase in the operating cost of the Central Gas system increases the probability of consumers choosing other options by 0.039%.</p>
+
+# **Exercise 4**
+Re-estimate the nested logit model in this chapter, but change the nests to types of energy as follows:
+
+Gas: gas central, gas room.
+
+Electricity: electric central, electric room, heat pump.
+
+Use a single coefficient for the inclusive variables (i.e.,set un.nest.el = TRUE). Are the results reasonable? Discuss.
+
+```{r}
+nests_energy <- list(
+  gas = c("gc", "gr"),        
+  electricity = c("ec", "er", "hp")
+)
+
+nl_energy <- mlogit(depvar ~ ic + oc, data = H,
+                    nests = nests_energy,
+                    un.nest.el = TRUE)
+
+summary(nl_energy)
+```
+
+<p style="color:green;">The installation and operating cost coefficients are negative and significant, suggesting that higher costs reduce perceived utility.</p>
+
