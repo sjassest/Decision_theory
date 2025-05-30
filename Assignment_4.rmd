@@ -1,0 +1,128 @@
+---
+title: "Assignment_4"
+author: "Samuel Estrada Jasso"
+date: "2025-05-28"
+output:
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_depth: 3
+---
+
+```{r, echo=FALSE, include=FALSE}
+library(knitr)
+library(tidyverse)
+library(discrtr)
+library(mlogit)
+library(readr)
+library(plotly)
+library(gplots)
+library(ggmosaic) 
+library(treemapify)
+library(ggridges)
+library(ggalluvial)
+library(dplyr)
+library(ggplot2)
+library(stargazer) 
+library(evd)
+library(htmlwidgets)
+library(kableExtra)
+library(tidyr)
+library(webshot2)
+library(dfidx)
+```
+
+# **Exercise 1**
+In the example in this chapter we estimated the probabilities of choosing different modes by sidewalk density setting travel time to the in-sample median. Use model2 to calculate the probability of choosing different modes by in-sample median sidewalk density but now for travel times of 20, 30, and 40min. Discuss the results. 
+
+```{r}
+data("mc_commute_wide", package = "discrtr")
+
+mc_commute_long <- mc_commute_wide |> 
+mlogit.data(shape="wide",
+            choice = "choice",
+            varying = 3:22)
+
+mc_commute_predict <- mc_commute_long[1:52, ]
+mc_commute_predict$sidewalk_density <- rep(seq(from=0, to=60, by=5), each=4)
+```
+
+```{r}
+f2 <- mFormula(choice ~ time | sidewalk_density)
+
+model2 <- mlogit(f2, mc_commute_long)
+
+times <- c(20, 30, 40)
+results <- list()
+
+for (t in times) {
+    mc_commute_predict$time <- t
+    probs <- predict(model2, newdata=mc_commute_predict)
+    results[[as.character(t)]] <- probs
+}
+
+for (t in times) {
+    cat("\nProbabilities for travel time =", t, "minutes:\n")
+    print(results[[as.character(t)]])
+}
+```
+
+<p style="color:green;">At this point, $f2$ assumes that travel time affects the total number of options in the same proportion, and as travel time increases, the utility of each alternative decreases by the same amount.
+</p>
+
+# **Exercise 2**
+Estimate a model using formula f3 (call it model3). Discuss the output of this model.
+
+```{r}
+f3 <- mFormula(choice ~ 0 | sidewalk_density | time)
+
+model3 <- mlogit(f3, mc_commute_long)
+
+summary(model3)
+```
+
+<p style="color:green;">On the contrary, model3 allows travel time to affect each mode of transportation differently.</p>
+
+
+# **Exercise 3**
+Use model3 to calculate the probability of choosing different modes by in sample median sidewalk density but now for travel times of 20, 30, and 40min. Discuss the results.
+
+```{r}
+times <- c(20, 30, 40)
+results <- list()
+
+for (t in times) {
+    mc_commute_predict$time <- t
+    probs <- predict(model3, newdata=mc_commute_predict)
+    results[[as.character(t)]] <- probs
+}
+
+for (t in times) {
+    cat("\nProbabilities for travel time =", t, "minutes:\n")
+    print(results[[as.character(t)]])
+}
+```
+<p style="color:green;">The longer the travel time, the lower the probability of walking or choosing a car or bus. On the contrary, the probability of opting for a bicycle increases.</p>
+
+
+# **Exercise 4**
+In the general case, what is the value of the log-likelihood of the null (Equally Likely) model?
+
+```{r}
+f0 <- mFormula(choice ~ 1)
+model0 <- mlogit(f0, mc_commute_long)
+summary(model0)
+```
+
+# **Exercise 5**
+Use the likelihood ratio test to compare model3 to model2? Discuss the results. What restrictions would you need to impose in model3 to obtain model2?
+
+```{r}
+lrtest(model2, model3)
+```
+
+<p style="color:green;">Model3 fits significantly better than Model2, suggesting that allowing the effect of time to vary by mode of transportation improves the model.</p>
+<p style="color:green;">To obtain Model2, the time coefficient must be the same across all alternatives.</p>
+
+
